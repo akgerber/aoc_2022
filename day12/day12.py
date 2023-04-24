@@ -1,6 +1,4 @@
 from dataclasses import dataclass
-from collections import deque
-from typing import Deque
 
 START_CHAR = 'S'
 END_CHAR = 'E'
@@ -48,62 +46,47 @@ def find_shortest_path_len(hill_map: HillMap) -> int:
     def get_unseen_neighbors(x: int, y: int) -> list[tuple[int, int]]:
         offsets = [(1, 0), (0, 1), (-1, 0), (0, -1)]
         unseen_neighbors = []
-        for i, j in offsets:
-            l, m = x+i, y+j
-            print(f"x:{x} y:{y} l:{l} m:{m}")
-            if l < 0 or m < 0 or l >= hill_map.width or m >= + hill_map.height:
-                print("off map")
+        for dx, dy in offsets:
+            i, j = x+dx, y+dy
+            if i < 0 or j < 0 or i >= hill_map.width or j >= + hill_map.height:
                 continue
-            elif (l,m) in seen:
-                print("seen")
+            elif (i,j) in seen:
                 continue
-            elif (hill_map.elevations[y][x] - hill_map.elevations[m][l]) <= 1:
-                print("good")
-                seen.add((l,m))
-                unseen_neighbors.append((l,m))
+            elif (hill_map.elevations[j][i] - hill_map.elevations[y][x]) <= 1:
+                seen.add((i,j))
+                unseen_neighbors.append((i,j))
             else:
-                print(f"too high: curr:{hill_map.elevations[y][x]} poss:{hill_map.elevations[m][l]}")
+                # too high to climb
+                continue
         return unseen_neighbors
             
 
-    @dataclass
-    class Iteration:
-        # name could be better
-        depth: int
-        positions: list[tuple[int,int]]
+    # Breadth-first search
+    depth = 0
+    positions = [hill_map.start]
 
-    node_queue:Deque[Iteration] = deque()
-    path_len = 0
-    node_queue.append(Iteration(depth=0, positions=[hill_map.end]))
-    #BFS 
-    while (iteration := node_queue.popleft()) and path_len < hill_map.num_positions:
-        print(f"s current iteration:{iteration} node_queue={node_queue}")
-        #seen.add((x, y))
+    while depth < hill_map.num_positions:
         deeper_positions = []
-        for (x, y) in iteration.positions:
+        for (x, y) in positions:
             unseen_neighbors = get_unseen_neighbors(x, y)
-            for (i, j) in unseen_neighbors:
-                if (i,j) == hill_map.start:
-                    print("bingo")
-                    return iteration.depth + 1
+            for neighbor in unseen_neighbors:
+                if neighbor == hill_map.end:
+                    return depth + 1
             deeper_positions.extend(unseen_neighbors)
-            print(f"num seen: {len(seen)}")
         # This indicates no path exists which violates the problem definition
         assert(len(deeper_positions) > 0)
-        node_queue.append(Iteration(depth=iteration.depth+1, positions=deeper_positions))
+        positions = deeper_positions
+        depth += 1
 
-
-    # Should never reach here
+    # This indicates no path exists which violates the problem definition
     assert(False)
 
 if __name__ == "__main__":
     lines = []
     #with open("input_easy.txt") as f:
-    #with open("input_med.txt") as f:
     with open("input.txt") as f:
         for line in f.readlines():
             lines.append(line.strip())
     hill_map = prepare_input(lines)
-    print(hill_map)
     path_len = find_shortest_path_len(hill_map)
     print(path_len)
