@@ -11,26 +11,34 @@ class HillMap:
     num_positions: int
     width: int
     height: int
+    a_positions: list[tuple[int,int]]
 
 
 def prepare_input(lines: list[str]) -> HillMap:
     start = None
     end = None
     num_chars_seen = 0
+    elevations = []
+    a_positions = []
+
     assert(len(lines) > 0)
     first_line_len = len(lines[0])
-    elevations = []
     for y, line in enumerate(lines):
         assert(len(line) == first_line_len)
         elev_line = []
         for x, c in enumerate(line):
             if c == START_CHAR:
                 start = (x,y)
+                # start char is at elevation 'a'
+                a_positions.append((x, y))
                 elev_line.append(ord('a') - ord('a'))
             elif c == END_CHAR:
                 end = (x,y)
+                # end char is at elevation 'z'
                 elev_line.append(ord('z') - ord('a'))
             else:
+                if c == 'a':
+                    a_positions.append((x, y))
                 elev_line.append(ord(c) - ord('a'))
         elevations.append(elev_line)
         num_chars_seen = len(line) * y
@@ -38,9 +46,9 @@ def prepare_input(lines: list[str]) -> HillMap:
     assert(end is not None)
     return HillMap(elevations=elevations, start=start, end=end,
                    num_positions=num_chars_seen, width=len(elevations[0]),
-                   height=len(elevations))
+                   height=len(elevations), a_positions=a_positions)
 
-def find_shortest_path_len(hill_map: HillMap) -> int:
+def find_shortest_path_len(hill_map: HillMap, start_pos: tuple[int,int]) -> int | None:
     seen:set(tuple(int, int)) = set()
 
     def get_unseen_neighbors(x: int, y: int) -> list[tuple[int, int]]:
@@ -63,7 +71,7 @@ def find_shortest_path_len(hill_map: HillMap) -> int:
 
     # Breadth-first search
     depth = 0
-    positions = [hill_map.start]
+    positions = [start_pos]
 
     while depth < hill_map.num_positions:
         deeper_positions = []
@@ -74,7 +82,9 @@ def find_shortest_path_len(hill_map: HillMap) -> int:
                     return depth + 1
             deeper_positions.extend(unseen_neighbors)
         # This indicates no path exists which violates the problem definition
-        assert(len(deeper_positions) > 0)
+        #assert(len(deeper_positions) > 0)
+        if len(deeper_positions) == 0:
+            return None
         positions = deeper_positions
         depth += 1
 
@@ -82,11 +92,21 @@ def find_shortest_path_len(hill_map: HillMap) -> int:
     assert(False)
 
 if __name__ == "__main__":
+    # Prepare input data
     lines = []
     #with open("input_easy.txt") as f:
     with open("input.txt") as f:
         for line in f.readlines():
             lines.append(line.strip())
     hill_map = prepare_input(lines)
-    path_len = find_shortest_path_len(hill_map)
-    print(path_len)
+    
+    # Part 1
+    path_len = find_shortest_path_len(hill_map, hill_map.start)
+    print(f"part 1: {path_len}")
+    
+    # Part 2
+    path_lengths_for_all_as = [find_shortest_path_len(hill_map, i)
+                               for i in hill_map.a_positions]
+    valid_path_lengths = [i for i in path_lengths_for_all_as if i is not None]
+    path_len_pt2 = min(valid_path_lengths)
+    print(f"part 2: {path_len_pt2}")
